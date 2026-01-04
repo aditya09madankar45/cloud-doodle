@@ -2,44 +2,43 @@ const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 
 let tool = "brush";
-let color = "#000";
+let color = "#000000";
 let size = 6;
 let drawing = false;
 
 let elements = [];
 let undoStack = [];
 let redoStack = [];
-
 let current = null;
 
-function resize() {
+/* ===== CANVAS SETUP ===== */
+function resizeCanvas() {
   const rect = canvas.getBoundingClientRect();
   const dpr = window.devicePixelRatio || 1;
   canvas.width = rect.width * dpr;
   canvas.height = rect.height * dpr;
-  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   redraw();
 }
-window.addEventListener("resize", resize);
-resize();
+window.addEventListener("resize", resizeCanvas);
+resizeCanvas();
 
-function pos(e) {
+function getPos(e) {
   if (e.touches) e = e.touches[0];
   const r = canvas.getBoundingClientRect();
   return { x: e.clientX - r.left, y: e.clientY - r.top };
 }
 
-/* ===== DRAW ENGINE ===== */
-
+/* ===== DRAW LOGIC ===== */
 function start(e) {
   drawing = true;
-  const p = pos(e);
+  const p = getPos(e);
 
   if (tool === "brush" || tool === "eraser") {
     current = {
       type: "path",
       points: [p],
-      color: tool === "eraser" ? "#fff" : color,
+      color: tool === "eraser" ? "#ffffff" : color,
       size
     };
   } else {
@@ -50,7 +49,7 @@ function start(e) {
 function move(e) {
   if (!drawing) return;
   e.preventDefault();
-  const p = pos(e);
+  const p = getPos(e);
 
   if (current.type === "path") {
     current.points.push(p);
@@ -72,6 +71,7 @@ function end() {
   current = null;
 }
 
+/* ===== RENDER ===== */
 function drawElement(el) {
   ctx.strokeStyle = el.color;
   ctx.lineWidth = el.size;
@@ -79,20 +79,20 @@ function drawElement(el) {
 
   if (el.type === "path") {
     ctx.beginPath();
-    el.points.forEach((p,i)=>{
-      i ? ctx.lineTo(p.x,p.y) : ctx.moveTo(p.x,p.y);
-    });
+    el.points.forEach((p, i) =>
+      i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)
+    );
     ctx.stroke();
   }
 
   if (el.type === "rect") {
-    ctx.strokeRect(el.x1, el.y1, el.x2-el.x1, el.y2-el.y1);
+    ctx.strokeRect(el.x1, el.y1, el.x2 - el.x1, el.y2 - el.y1);
   }
 
   if (el.type === "circle") {
-    const r = Math.hypot(el.x2-el.x1, el.y2-el.y1);
+    const r = Math.hypot(el.x2 - el.x1, el.y2 - el.y1);
     ctx.beginPath();
-    ctx.arc(el.x1, el.y1, r, 0, Math.PI*2);
+    ctx.arc(el.x1, el.y1, r, 0, Math.PI * 2);
     ctx.stroke();
   }
 
@@ -105,37 +105,54 @@ function drawElement(el) {
 }
 
 function redraw() {
-  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
   elements.forEach(drawElement);
 }
 
 /* ===== EVENTS ===== */
-
 canvas.addEventListener("mousedown", start);
 canvas.addEventListener("mousemove", move);
 canvas.addEventListener("mouseup", end);
+canvas.addEventListener("mouseleave", end);
 
-canvas.addEventListener("touchstart", start, {passive:false});
-canvas.addEventListener("touchmove", move, {passive:false});
+canvas.addEventListener("touchstart", start, { passive: false });
+canvas.addEventListener("touchmove", move, { passive: false });
 canvas.addEventListener("touchend", end);
 
-document.querySelectorAll("[data-tool]").forEach(b=>{
-  b.onclick = ()=> tool = b.dataset.tool;
+document.querySelectorAll("[data-tool]").forEach(btn => {
+  btn.onclick = () => tool = btn.dataset.tool;
 });
 
-document.getElementById("colorPicker").oninput = e=>color=e.target.value;
-document.getElementById("size").oninput = e=>size=e.target.value;
+document.querySelectorAll(".palette span").forEach(c => {
+  c.style.background = c.dataset.color;
+  c.onclick = () => color = c.dataset.color;
+});
 
-document.getElementById("undo").onclick = ()=>{
+document.getElementById("size").oninput = e => size = e.target.value;
+
+document.getElementById("undo").onclick = () => {
   if (!undoStack.length) return;
   redoStack.push(JSON.stringify(elements));
   elements = JSON.parse(undoStack.pop());
   redraw();
 };
 
-document.getElementById("redo").onclick = ()=>{
+document.getElementById("redo").onclick = () => {
   if (!redoStack.length) return;
   undoStack.push(JSON.stringify(elements));
   elements = JSON.parse(redoStack.pop());
   redraw();
+};
+
+/* ===== PDF EXPORT ===== */
+document.getElementById("pdf").onclick = () => {
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF("portrait", "px", "a4");
+
+  const img = canvas.toDataURL("image/png");
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const pageHeight = (canvas.height / canvas.width) * pageWidth;
+
+  pdf.addImage(img, "PNG", 0, 0, pageWidth, pageHeight);
+  pdf.save("adityas-doodle-space.pdf");
 };

@@ -9,7 +9,7 @@
 <body>
 
 <header>
-  <h1>Aditya's Doodle Space</h1>
+  <h1>Aditya’s Doodle Space</h1>
 </header>
 
 <div class="app">
@@ -20,11 +20,21 @@
     <button data-tool="rect">▭</button>
     <button data-tool="circle">◯</button>
     <button data-tool="line">／</button>
+
     <button id="undo">↶</button>
     <button id="redo">↷</button>
 
-    <input type="color" id="colorPicker"/>
+    <div class="palette">
+      <span data-color="#000000"></span>
+      <span data-color="#ff3b30"></span>
+      <span data-color="#ff9500"></span>
+      <span data-color="#34c759"></span>
+      <span data-color="#007aff"></span>
+      <span data-color="#af52de"></span>
+    </div>
+
     <input type="range" id="size" min="2" max="20" value="6"/>
+    <button id="pdf">📄 PDF</button>
   </div>
 
   <div class="board">
@@ -33,6 +43,7 @@
 
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="script.js"></script>
 </body>
 </html>
