@@ -1,0 +1,36 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  touch-action: none;
+}
+
+body {
+  background: radial-gradient(circle at top, #0b1f40, #030816);
+  overflow: hidden;
+  font-family: system-ui, sans-serif;
+}
+
+.toolbar {
+  position: fixed;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 10px;
+  padding: 10px 14px;
+  background: rgba(15,30,60,0.9);
+  border-radius: 14px;
+  backdrop-filter: blur(12px);
+  z-index: 10;
+}
+
+.toolbar button,
+.toolbar input {
+  background: #10244d;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: 16px;
+}
