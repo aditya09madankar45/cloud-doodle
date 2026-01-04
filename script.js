@@ -1,84 +1,141 @@
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 
-let drawing = false;
-let mode = "brush";
-let color = "#000000";
+let tool = "brush";
+let color = "#000";
 let size = 6;
+let drawing = false;
 
-function resizeCanvas() {
+let elements = [];
+let undoStack = [];
+let redoStack = [];
+
+let current = null;
+
+function resize() {
   const rect = canvas.getBoundingClientRect();
-  const ratio = window.devicePixelRatio || 1;
-
-  canvas.width = rect.width * ratio;
-  canvas.height = rect.height * ratio;
-
-  ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
-  ctx.lineCap = "round";
-  ctx.lineJoin = "round";
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  redraw();
 }
+window.addEventListener("resize", resize);
+resize();
 
-resizeCanvas();
-window.addEventListener("resize", resizeCanvas);
-
-function getPos(e) {
+function pos(e) {
   if (e.touches) e = e.touches[0];
-  const rect = canvas.getBoundingClientRect();
-  return {
-    x: e.clientX - rect.left,
-    y: e.clientY - rect.top
-  };
+  const r = canvas.getBoundingClientRect();
+  return { x: e.clientX - r.left, y: e.clientY - r.top };
 }
+
+/* ===== DRAW ENGINE ===== */
 
 function start(e) {
   drawing = true;
-  const p = getPos(e);
-  ctx.beginPath();
-  ctx.moveTo(p.x, p.y);
+  const p = pos(e);
+
+  if (tool === "brush" || tool === "eraser") {
+    current = {
+      type: "path",
+      points: [p],
+      color: tool === "eraser" ? "#fff" : color,
+      size
+    };
+  } else {
+    current = { type: tool, x1: p.x, y1: p.y, x2: p.x, y2: p.y, color, size };
+  }
 }
 
 function move(e) {
   if (!drawing) return;
   e.preventDefault();
+  const p = pos(e);
 
-  const p = getPos(e);
-  ctx.strokeStyle = mode === "eraser" ? "#ffffff" : color;
-  ctx.lineWidth = size;
-  ctx.lineTo(p.x, p.y);
-  ctx.stroke();
+  if (current.type === "path") {
+    current.points.push(p);
+  } else {
+    current.x2 = p.x;
+    current.y2 = p.y;
+  }
+
+  redraw();
+  drawElement(current);
 }
 
 function end() {
+  if (!drawing) return;
   drawing = false;
-  ctx.closePath();
+  elements.push(current);
+  undoStack.push(JSON.stringify(elements));
+  redoStack = [];
+  current = null;
 }
+
+function drawElement(el) {
+  ctx.strokeStyle = el.color;
+  ctx.lineWidth = el.size;
+  ctx.lineCap = "round";
+
+  if (el.type === "path") {
+    ctx.beginPath();
+    el.points.forEach((p,i)=>{
+      i ? ctx.lineTo(p.x,p.y) : ctx.moveTo(p.x,p.y);
+    });
+    ctx.stroke();
+  }
+
+  if (el.type === "rect") {
+    ctx.strokeRect(el.x1, el.y1, el.x2-el.x1, el.y2-el.y1);
+  }
+
+  if (el.type === "circle") {
+    const r = Math.hypot(el.x2-el.x1, el.y2-el.y1);
+    ctx.beginPath();
+    ctx.arc(el.x1, el.y1, r, 0, Math.PI*2);
+    ctx.stroke();
+  }
+
+  if (el.type === "line") {
+    ctx.beginPath();
+    ctx.moveTo(el.x1, el.y1);
+    ctx.lineTo(el.x2, el.y2);
+    ctx.stroke();
+  }
+}
+
+function redraw() {
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  elements.forEach(drawElement);
+}
+
+/* ===== EVENTS ===== */
 
 canvas.addEventListener("mousedown", start);
 canvas.addEventListener("mousemove", move);
 canvas.addEventListener("mouseup", end);
-canvas.addEventListener("mouseleave", end);
 
-canvas.addEventListener("touchstart", start, { passive: false });
-canvas.addEventListener("touchmove", move, { passive: false });
+canvas.addEventListener("touchstart", start, {passive:false});
+canvas.addEventListener("touchmove", move, {passive:false});
 canvas.addEventListener("touchend", end);
 
-document.getElementById("brush").onclick = () => mode = "brush";
-document.getElementById("eraser").onclick = () => mode = "eraser";
-document.getElementById("colorPicker").oninput = e => color = e.target.value;
-document.getElementById("size").oninput = e => size = e.target.value;
+document.querySelectorAll("[data-tool]").forEach(b=>{
+  b.onclick = ()=> tool = b.dataset.tool;
+});
 
-document.getElementById("clear").onclick = () => {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+document.getElementById("colorPicker").oninput = e=>color=e.target.value;
+document.getElementById("size").oninput = e=>size=e.target.value;
+
+document.getElementById("undo").onclick = ()=>{
+  if (!undoStack.length) return;
+  redoStack.push(JSON.stringify(elements));
+  elements = JSON.parse(undoStack.pop());
+  redraw();
 };
 
-document.getElementById("pdf").onclick = () => {
-  const { jsPDF } = window.jspdf;
-  const pdf = new jsPDF("portrait", "px", "a4");
-
-  const img = canvas.toDataURL("image/png");
-  const pageWidth = pdf.internal.pageSize.getWidth();
-  const pageHeight = (canvas.height / canvas.width) * pageWidth;
-
-  pdf.addImage(img, "PNG", 0, 0, pageWidth, pageHeight);
-  pdf.save("cloud-doodle.pdf");
+document.getElementById("redo").onclick = ()=>{
+  if (!redoStack.length) return;
+  undoStack.push(JSON.stringify(elements));
+  elements = JSON.parse(redoStack.pop());
+  redraw();
 };

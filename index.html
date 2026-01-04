@@ -2,32 +2,37 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Cloud Doodle</title>
-  <link rel="stylesheet" href="style.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Aditya's Doodle Space</title>
+  <link rel="stylesheet" href="style.css"/>
 </head>
 <body>
 
+<header>
+  <h1>Aditya's Doodle Space</h1>
+</header>
+
 <div class="app">
 
-  <!-- Toolbar -->
   <div class="toolbar">
-    <button id="brush">🖌️</button>
-    <button id="eraser">🧽</button>
-    <input type="color" id="colorPicker" />
-    <input type="range" id="size" min="2" max="20" value="6" />
-    <button id="clear">🗑️</button>
-    <button id="pdf">📄 PDF</button>
+    <button data-tool="brush">🖌️</button>
+    <button data-tool="eraser">🧽</button>
+    <button data-tool="rect">▭</button>
+    <button data-tool="circle">◯</button>
+    <button data-tool="line">／</button>
+    <button id="undo">↶</button>
+    <button id="redo">↷</button>
+
+    <input type="color" id="colorPicker"/>
+    <input type="range" id="size" min="2" max="20" value="6"/>
   </div>
 
-  <!-- Drawing Board -->
   <div class="board">
     <canvas id="canvas"></canvas>
   </div>
 
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="script.js"></script>
 </body>
 </html>
